@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    #chatList {
+      margin: 0px 10px;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    .chat-user {
+      gap: 5px;
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      margin: 20px;
+      cursor: pointer;
+    }
+    .chat-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .chat-name {
+      color: black;
+      font-size: 24px;
+    }
+    
+    .chat-preview {
+      color: gray;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    
+    #chatModal {
+      position: fixed;
+      inset: 0;
+      background: white;
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+    }
+    
+    .chat-modal-header {
+      background: black;
+      color: white;
+      padding: 0px 16px;
+      font-size: 17px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chat-modal-header-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .chat-modal-name {
+      font-size: 24px;
+      text-decoration: underline;
+    }
+    
+    .chat-modal-id {
+      font-size: 16px;
+      color: gray;
+    }
+    
+    .chat-modal-header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+    }
+    
+    #chatArea {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .chat-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      min-width: 100%;
+    }
+    
+    .chat-wrapper.me {
+      justify-content: flex-end;
+    }
+    
+    .chat-wrapper.other {
+      justify-content: flex-start;
+    }
+    
+    .chatContent {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+    }
+    
+    .chat-wrapper.me .chatContent {
+      align-items: flex-end;
+    }
+    
+    .chat-wrapper.other .chatContent {
+      align-items: flex-start;
+    }
+    
+    .chat-bubble {
+      padding: 10px 14px;
+      border-radius: 7.5px;
+      max-width: 75%;
+      word-wrap: break-word;
+      font-size: 15px;
+      border: 3px solid black;
+    }
+    
+    .chat-wrapper.me .chat-bubble {
+      background: white;
+      color: black;
+      border-bottom-right-radius: 0;
+    }
+    
+    .chat-wrapper.other .chat-bubble {
+      background: black;
+      color: white;
+      border-bottom-left-radius: 0;
+    }
+    
+    .delete-msg-btn {
+      background: none;
+      border: none;
+      color: black;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 4px;
+    }
+    
+    #messageBox {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: white;
+      border-top: 3px solid black;
+      position: sticky;
+      bottom: 0;
+      width: 100%;
+      box-sizing: border-box;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    
+    #messageInput {
+      flex: 1;
+      min-width: 0;
+      border: 3px solid black;
+      padding: 10px 12px;
+      font-size: 18px;
+      border-radius: 999px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    
+    #submitMessage {
+      flex-shrink: 0;
+      background: black;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #floatingAddBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 32px;
+      width: 60px;
+      height: 60px;
+      background-color: black;
+      color: white;
+      border: 3px solid black;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    
+    #addChatForm {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      z-index: 999;
+    }
+    
+    #floatingAddBtn i,
+    #submitMessage i,
+    .delete-msg-btn i {
+      pointer-events: none;
+    }
+    
+    #addChatForm {
+      position: fixed;
+      bottom: 10px;
+      right: 90px; /* Agar muncul di sebelah kiri tombol + */
+      align-items: center;
+      z-index: 1000;
+      transition: all 0.3s ease;
+    }
+    
+    #addChatInput {
+      border: none;
+      outline: none;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 24px;
+      width: 60dvw;
+      background: white;
+      border: 3px solid black;
+    }
+  </style>
+</head>
+<body>
+  <div id="addChatForm" class="hidden">
+    <input id="addChatInput" placeholder="Enter user ID">
+    <button id="addChatBtn">Add Chat</button>
+  </div>
+  <div class="userList" id="userList"><i class="fas fa-spinner fa-spin"></i> Loading Users...</div>
+  <div id="chatModal">
+    <div class="chat-modal-header">
+      <div class="chat-modal-header-info">
+        <img id="chatModalAvatar" class="chat-modal-avatar" src="fallback.png">
+        <div>
+          <div id="chatModalName" class="chat-modal-name">User Name</div>
+          <div id="chatModalId" class="chat-modal-id">User ID</div>
+        </div>
+      </div>
+      <button id="chatModalClose">&times;</button>
+    </div>
+    <div id="chatArea"></div>
+    <div id="messageBox">
+      <input id="messageInput" type="text" placeholder="Type a message" />
+      <button id="submitMessage">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script>
+  //Fill firebaseConfig
+    const firebaseConfig = {};
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    
+    const chatUserList = document.getElementById("userList");
+    const addChatBtn = document.getElementById("addChatBtn");
+    const addChatInput = document.getElementById("addChatInput");
+    const addChatForm = document.getElementById("addChatForm");
+
+    let selectedChatId = null;
+    let currentUser = null;
+    let unsubscribeChat = null;
+    let selectedChatMessages = [];
+    
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
+      currentUser = user;
+    
+      // Real-time listener ke dokumen user ini
+      firebase.firestore().collection("User").doc(currentUser.uid)
+        .onSnapshot(async (docSnap) => {
+          if (!docSnap.exists) return;
+    
+          const userData = docSnap.data();
+          const chats = userData.chats || {}; // { otherUserId: [...] }
+          const chatUserIds = Object.keys(chats);
+    
+          chatUserList.innerHTML = "";
+    
+          for (const otherUserId of chatUserIds) {
+            const otherDoc = await firebase.firestore().collection("User").doc(otherUserId).get();
+            const otherData = otherDoc.data();
+    
+            const lastMessage = chats[otherUserId]?.slice(-1)[0];
+    
+            const div = document.createElement("div");
+            div.className = "chat-user";
+            div.innerHTML = `
+              <div class="chat-info">
+                <div class="chat-name">${otherData.name || "Unknown"}</div>
+                <div class="chat-preview">${lastMessage?.chat || ""}</div>
+              </div>
+            `;
+            div.addEventListener("click", () => {
+              openChatModal(otherUserId, otherData.name);
+            });
+    
+            chatUserList.appendChild(div);
+          }
+        });
+    });
+    addChatBtn.addEventListener("click", async () => {
+      const targetId = addChatInput.value.trim();
+      if (!targetId) return;
+      if (!currentUser) return alert("Please make sure you're logged in.");
+      if (targetId === currentUser.uid) return alert("You can't chat with yourself.");
+      try {
+        const targetRef = db.collection("User").doc(targetId);
+        const targetSnap = await targetRef.get();
+        if (!targetSnap.exists) {
+          alert("User not found.");
+          addChatInput.value = "";
+          return;
+        }
+    
+        const userRef = db.collection("User").doc(currentUser.uid);
+        const userSnap = await userRef.get();
+        const userData = userSnap.data() || {};
+        const chats = userData.chats || {};
+    
+        if (!chats[targetId]) {
+          chats[targetId] = [];
+          await userRef.update({ chats });
+          alert("Chat added successfully.");
+        } else {
+          alert("Chat already exists.");
+        }
+    
+        addChatInput.value = "";
+      } catch (err) {
+        console.error("Add chat failed:", err);
+        alert("Failed to add chat.");
+      } finally {
+        
+      }
+    })
+    function openChatModal(targetId, targetName) {
+      selectedChatId = targetId;
+    
+      document.getElementById("chatModalName").textContent = targetName || "Unknown";
+      document.getElementById("chatModalId").textContent = targetId;
+      document.getElementById("chatModal").style.display = "flex";
+    
+      if (unsubscribeChat) unsubscribeChat();
+    
+      // Dengarkan kedua jalur chat: dari target ke kita & kita ke target
+      const currentUserRef = db.collection("User").doc(currentUser.uid);
+      const targetUserRef = db.collection("User").doc(targetId);
+    
+      const updateMessages = async () => {
+        const [snap1, snap2] = await Promise.all([
+          currentUserRef.get(),
+          targetUserRef.get()
+        ]);
+    
+        const incoming = snap1.data()?.chats?.[targetId] || [];
+        const outgoing = snap2.data()?.chats?.[currentUser.uid] || [];
+    
+        // Gabungkan lalu urutkan berdasarkan timestamp
+        const combined = [...incoming, ...outgoing].sort((a, b) => a.timestamp - b.timestamp);
+        selectedChatMessages = combined;
+        renderMessages();
+      };
+    
+      unsubscribeChat = currentUserRef.onSnapshot(updateMessages);
+      // opsional: bisa tambahkan satu lagi jika ingin benar-benar realtime dari kedua arah
+      targetUserRef.onSnapshot(updateMessages);
+    }
+    function renderMessages() {
+      chatArea.innerHTML = "";
+      selectedChatMessages.forEach((msg, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "chat-wrapper";
+        wrapper.classList.add(msg.from === currentUser.uid ? "me" : "other");
+        
+        const chatContent = document.createElement("div");
+        chatContent.className = "chatContent";
+        
+        const chatTime = document.createElement("span");
+        chatTime.className = "chatTime";
+        chatTime.textContent = new Date(msg.timestamp).toLocaleString();
+        
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble";
+        bubble.textContent = msg.chat;
+        
+        chatContent.appendChild(bubble);
+        chatContent.appendChild(chatTime);
+        wrapper.appendChild(chatContent);
+        
+        const isOwner = msg.from === currentUser.uid;
+        if (isOwner) {
+          const delBtn = document.createElement("button");
+          delBtn.innerHTML = `<i class="fas fa-trash-alt"></i>`;
+          delBtn.className = "delete-msg-btn";
+          delBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            if (!confirm("Delete this message for everyone?")) return;
+    
+            try {
+              await deleteMessageAtIndex(index);
+            } catch (err) {
+              console.error("Delete error:", err);
+              alert("Failed to delete message.");
+            }
+          });
+          //wrapper.insertBefore(delBtn, bubble); // ⬅️ tombol di sebelah kiri bubble
+          chatTime.appendChild(delBtn);
+        }
+    
+        chatArea.appendChild(wrapper);
+      });
+    
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    async function deleteMessageAtIndex(index) {
+      const target = selectedChatMessages[index];
+      const pathUser = target.from === currentUser.uid ? selectedChatId : currentUser.uid;
+      const userRef = db.collection("User").doc(pathUser);
+    
+      const snap = await userRef.get();
+      const data = snap.data()?.chats?.[target.from] || [];
+    
+      const newMessages = data.filter(m => m.timestamp !== target.timestamp);
+    
+      await userRef.update({
+        [`chats.${target.from}`]: newMessages
+      });
+    }
+    const submitBtn = document.getElementById("submitMessage");
+    const messageInput = document.getElementById("messageInput");
+    
+    submitBtn.addEventListener("click", async () => {
+      const text = messageInput.value.trim();
+      if (!text || !selectedChatId || !currentUser) return;
+    
+      // Set loading icon dan disable tombol
+      submitBtn.disabled = true;
+      const originalIcon = submitBtn.innerHTML;
+      submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+    
+      const message = {
+        chat: text,
+        from: currentUser.uid,
+        timestamp: Date.now(),
+      };
+    
+      try {
+        /*const senderRef = db.collection("QwertyUsers").doc(currentUser.uid);*/
+        const receiverRef = db.collection("User").doc(selectedChatId);
+    
+        /*await senderRef.set(
+          {
+            chats: {
+              [selectedChatId]: firebase.firestore.FieldValue.arrayUnion(message),
+            },
+          },
+          { merge: true }
+        );*/
+    
+        await receiverRef.set(
+          {
+            chats: {
+              [currentUser.uid]: firebase.firestore.FieldValue.arrayUnion(message),
+            },
+          },
+          { merge: true }
+        );
+    
+        messageInput.value = "";
+      } catch (err) {
+        alert("Failed to send message.");
+        console.error(err);
+      }
+    
+      // Kembalikan tombol ke normal
+      submitBtn.innerHTML = originalIcon;
+      submitBtn.disabled = false;
+    });
+    document.getElementById("chatModalClose").addEventListener("click", () => {
+      document.getElementById("chatModal").style.display = "none";
+      if (unsubscribeChat) unsubscribeChat();
+    });
+  </script>
+</body>
+</html>
